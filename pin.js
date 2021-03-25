@@ -1,55 +1,50 @@
 /* NEW VERSION
-*  Pindexeddbb.js 2.0.0003
+*  Pindexeddbb.js 2.0.0004
 *	29/01/2021
+	25/03/2021
 *
 */
 
 /*
-if (!window.indexedDB) {
-	window.alert("Seu navegador não suporta Alguns recursos.");
-}
+	if (!window.indexedDB) {
+		window.alert("Seu navegador não suporta Alguns recursos.");
+	}
 
-database = {
-	name: 'pin',
-	version: 1,
-	obj:{
-		user:{
-			val: {
-				keyPath: 'id_pin', autoIncrement: true
-			},
-			index:[
-			//	['id_user', 'id_user',{unique: true, multiEntry: false}],
-			//	['pass','pass',{unique: false,multiEntry: false}],
-				['email','email',{unique: true, multiEntry: true}]
-			]
+	database = {
+		name: 'pin',
+		version: 1,
+		obj:{
+			user:{
+				type: {
+					keyPath: 'id_pin', autoIncrement: true
+				},
+				index:[
+				//	['id_user', 'id_user',{unique: true, multiEntry: false}],
+				//	['pass','pass',{unique: false,multiEntry: false}],
+					['email','email',{unique: true, multiEntry: true}]
+				]
+			}
 		}
 	}
-}
+	// for Deg-dm3
+	$component({name:'pin',src:'/js/lib/pin.js'}, dbs).then((res)=>{
+	  $scope.pin.select('user',{email:'teste5@gmail.com'}).then((res)=>{
+		vv(res,'res')
+		});
+	});
+
+	// for inline
+	pin.construct(dbs);
+	pin.select('user',{email:'teste5@gmail.com'}).then((res)=>{
+		vv(res,'insert');
+	});
 */
 
-//var locals = '';
  pin = {
 //	abs:'model',
 	database:null,
-	construct(){
-		locals = $scope.pin;
-	//	locals = pin;
-		this.database = {
-			name: 'pin',
-			version: 2,
-			obj:{
-				user:{
-					val: {
-						keyPath: 'id_pin', autoIncrement: true
-					},
-					index:[
-					//	['id_user', 'id_user',{unique: true, multiEntry: false}],
-					//	['pass','pass',{unique: false,multiEntry: false}],
-						['email','email',{unique: false, multiEntry: true}]
-					]
-				}
-			}
-		}
+	construct(dbs=null){
+		this.database = dbs;
 	},
 	_get_db(){
 		return new Promise((resolve, reject)=>{
@@ -84,7 +79,7 @@ database = {
 						}
 						delete db_obj[dat]['index'];
 						if (!upgradeDb.objectStoreNames.contains(dat)) {
-							objectStore = upgradeDb.createObjectStore(dat, db_obj[dat].val );
+							objectStore = upgradeDb.createObjectStore(dat, db_obj[dat].type );
 							if(typeof objectStore != 'undefined'){
 								for(let i in aux){
 									objectStore.createIndex( ...aux[i] );
@@ -169,6 +164,26 @@ database = {
 	select(name_db, where, orAnd ){
 		return new Promise((resolve, reject)=>{
 
+			function getting(db, where, name_db, orAnd){
+				return new Promise((resolve, reject)=>{
+					let tx = db.transaction([name_db], 'readwrite');
+					let store = tx.objectStore(name_db);
+					var request = store.openCursor();
+					
+					request.onsuccess = (event)=>{
+						let res = store.getAll();
+						res.onsuccess = ()=>{
+							let aY = this._filter(res.result, where, orAnd );
+							resolve( aY );
+						}
+					}
+
+					request.onerror = function(ev){
+						reject(ev);
+					};
+				});
+			}
+			getting = getting.bind(this);
 			this._get_db( name_db ).then( (db)=>{
 				getting(db, where, name_db, orAnd).then((end)=>{
 					db.close();
@@ -178,26 +193,6 @@ database = {
 				});
 			});
 			
-			function getting(db, where, name_db, orAnd){
-				return new Promise((resolve, reject)=>{
-					let tx = db.transaction([name_db], 'readwrite');
-					let store = tx.objectStore(name_db);
-					var request = store.openCursor();
-					
-					request.onsuccess = (function(event){
-						let res = store.getAll();
-						res.onsuccess = (function() {
-							let aY = this._filter(res.result, where, orAnd );
-							resolve( aY );
-						}).bind( locals );
-					}).bind( locals );
-
-
-					request.onerror = function(ev){
-						reject(ev);
-					};
-				});
-			}
 		});
 	},
 	selectAll(name_db){
@@ -231,21 +226,18 @@ database = {
 	},
 	update(name_db, values, where, orAnd='and'){
 		return new Promise((resolve, reject)=>{
-			this._get_db( name_db).then( (db)=>{
-				updating(db, where, orAnd, values, name_db).then((end)=>{
-					db.close();
-					resolve(end);
-				});
-			});
 			function updating(db, where, orAnd, values, name_db ){
 				return new Promise((resolve, reject)=>{
+
+					/*
 					let tx = db.transaction([name_db], 'readwrite');
 					let store = tx.objectStore(name_db); 
 					var res = store.getAll();
-					res.onsuccess = function(event) {
+					res.onsuccess = (event)=>{
 						var result;
 						var arr={};
-						result = pin._filter(event.target.result, where, orAnd );
+						vv(this,'this filter pin.js')
+						result = this._filter(event.target.result, where, orAnd );a
 						
 						if(result.length==0){
 							resolve([]);
@@ -258,16 +250,77 @@ database = {
 						update_store.onsuccess = function(){
 							resolve( [ result[0] ] );
 						};
-					};			
+					};
+					*/
+					let tx = db.transaction([name_db], 'readwrite');
+					let store = tx.objectStore(name_db);
+					var request = store.openCursor();
+
+					request.onsuccess = (event)=>{
+						let res = store.getAll();
+						res.onsuccess = ()=>{
+							let result = this._filter(res.result, where, orAnd );
+							if(result.length==0){
+								resolve([]);
+								return false;
+							}
+							for(let i in values ){
+								result[0][i] = values[i];
+							}
+							var update_store = store.put(result[0] );
+							update_store.onsuccess = function(){
+								resolve( [ result[0] ] );
+							};
+						//	resolve(  );
+						}
+					}
 				});
 			}
+			updating = updating.bind(this);
+
+			this._get_db( name_db).then( (db)=>{
+				updating(db, where, orAnd, values, name_db).then((end)=>{
+					db.close();
+					resolve(end);
+				});
+			});
 		});
 	},
 	delete(name_db, where, orAnd='and'){
 		return new Promise((resolve, reject)=>{
+			function delete_db( db, where, name_db, orAnd ){
+				return new Promise((resolve, reject)=>{
+					
+					let tx = db.transaction([name_db], 'readwrite');
+					let store = tx.objectStore(name_db);
+					var request = store.openCursor();
+
+					request.onsuccess = (event)=>{
+						let res = store.getAll();
+						res.onsuccess = ()=>{
+							let fresult = this._filter(res.result, where, orAnd );
+							event.target.result = fresult;
+							keyIndex = event.target.source.keyPath;
+							if(fresult.length==0){
+								resolve([0]);
+							}else{
+								for(let r in fresult){
+									var update_store = store.delete( fresult[ r ][  keyIndex  ] );
+								}
+								update_store.onsuccess = function(){
+									resolve([1]);
+								};
+							}
+							return false;
+						//	resolve(  );
+						}
+					}		
+				});
+			}
 			if(orAnd != 'and' && orAnd != 'or'){
 				orAnd = 'and';
 			}
+			delete_db = delete_db.bind(this);
 			this._get_db( name_db).then( (db)=>{
 				delete_db(db, where, name_db, orAnd ).then((end)=>{
 					db.close();
@@ -275,32 +328,6 @@ database = {
 				});
 			});
 		});	
-		function delete_db( db, where, name_db, orAnd ){
-			return new Promise((resolve, reject)=>{
-				let tx = db.transaction([name_db], 'readwrite');
-				let store = tx.objectStore(name_db); 
-
-				var res = store.getAll();
-				res.onsuccess = function(event) {
-					var fresult;
-					var arr={};
-					fresult = pin._filter(event.target.result, where, orAnd );
-					event.target.result = fresult;
-					keyIndex = event.target.source.keyPath;
-					if(fresult.length==0){
-						resolve([0]);
-					}else{
-						for(let r in fresult){
-							var update_store = store.delete( fresult[ r ][  keyIndex  ] );
-						}
-						update_store.onsuccess = function(){
-							resolve([1]);
-						};
-					}
-					return false;
-				};			
-			});
-		}
 	},
 	clear(){
 
