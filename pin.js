@@ -261,12 +261,11 @@ pin = {
 					db.close();
 					resolve(end);
 				}).catch((err)=>{
-					vv(err,'error_clear_db');
+					console.log(err,'error_clear_db');
 				});
 			}
 			function clear_db(db, name_db){
 				return new Promise((resolve, reject)=>{
-					vv(db,'clear pin');
 					pin._get_db().then((db)=>{
 						var trans = db.transaction([name_db], "readwrite");
 						var store = trans.objectStore(name_db);
