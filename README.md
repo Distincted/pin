@@ -57,11 +57,8 @@ pin.update('user',{email:'qwerty@gmail.com', pass:'123' },{id_user: 1, email:'ab
 
 # Delete 
 pin.delete('user',{email:'qwerty@gmail.com', pass:'123' }, 'or' ).then(function(res){
-  // DELETE FROM user WHERE email='abcd@gmail.com' or id_user=1
+  // DELETE FROM user WHERE email='abcd@gmail.com' or pass=123
    console.log(res,'res');
 });
 
-# Clear
-pin.clear('user').then(function(res){
-  
-});
+
